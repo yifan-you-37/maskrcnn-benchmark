@@ -95,7 +95,15 @@ class RPNPostProcessor(torch.nn.Module):
         objectness, topk_idx = objectness.topk(pre_nms_top_n, dim=1, sorted=True)
 
         batch_idx = torch.arange(N, device=device)[:, None]
-        box_regression = box_regression[batch_idx, topk_idx]
+            # print(batch_idx)
+            # print(topk_idx.shape)
+            # print(box_regression.shape)
+            
+        # box_regression = box_regression[batch_idx, topk_idx]
+        # change above line to use index_select
+        box_regression = torch.index_select(box_regression, 0, batch_idx[0])
+        box_regression = torch.index_select(box_regression, 1, topk_idx[0])
+        # print('shape afterward:', box_regression.shape)
 
         image_shapes = [box.size for box in anchors]
         concat_anchors = torch.cat([a.bbox for a in anchors], dim=0)

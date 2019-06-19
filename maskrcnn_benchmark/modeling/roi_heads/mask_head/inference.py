@@ -43,10 +43,9 @@ class MaskPostProcessor(nn.Module):
         labels = torch.cat(labels)
         index = torch.arange(num_masks, device=labels.device)
         mask_prob = mask_prob[index, labels][:, None]
-
         boxes_per_image = [len(box) for box in boxes]
         mask_prob = mask_prob.split(boxes_per_image, dim=0)
-
+ 
         if self.masker:
             mask_prob = self.masker(mask_prob, boxes)
 

@@ -24,7 +24,12 @@ class FrozenBatchNorm2d(nn.Module):
             self.running_mean = self.running_mean.half()
             self.running_var = self.running_var.half()
 
-        scale = self.weight * self.running_var.rsqrt()
+        # scale = self.weight * self.running_var.rsqrt()
+        self.running_var_tmp = self.running_var.sqrt()
+        self.tmp = torch.ones(self.running_var_tmp.shape)
+        self.running_var_tmp = self.tmp / self.running_var_tmp
+        scale = self.weight * self.running_var_tmp
+
         bias = self.bias - self.running_mean * scale
         scale = scale.reshape(1, -1, 1, 1)
         bias = bias.reshape(1, -1, 1, 1)

@@ -144,6 +144,7 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         outputs = []
+        print('in resnet: ', x.shape)
         x = self.stem(x)
         for stage_name in self.stages:
             x = getattr(self, stage_name)(x)

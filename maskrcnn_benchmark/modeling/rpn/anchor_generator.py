@@ -109,19 +109,36 @@ class AnchorGenerator(nn.Module):
             inds_inside = torch.ones(anchors.shape[0], dtype=torch.uint8, device=device)
         boxlist.add_field("visibility", inds_inside)
 
-    def forward(self, image_list, feature_maps):
+    def forward(self, image_list, image_size_list, feature_maps):
         grid_sizes = [feature_map.shape[-2:] for feature_map in feature_maps]
         anchors_over_all_feature_maps = self.grid_anchors(grid_sizes)
         anchors = []
-        for i, (image_height, image_width) in enumerate(image_list.image_sizes):
+
+        # for i, (image_height, image_width) in enumerate(image_list.image_sizes):
+        #     anchors_in_image = []
+        #     for anchors_per_feature_map in anchors_over_all_feature_maps:
+        #         boxlist = BoxList(
+        #             anchors_per_feature_map, (image_width, image_height), mode="xyxy"
+        #         )
+        #         print('width: %d, height: %d' % (image_width, image_height))
+        #         self.add_visibility_to(boxlist)
+        #         anchors_in_image.append(boxlist)
+        #     anchors.append(anchors_in_image)
+
+        # image_list is a list of tensors, not ImageList
+        for i, (image_tensor) in enumerate(image_list):
             anchors_in_image = []
+            image_width = image_size_list[i][0].item()
+            image_height = image_size_list[i][1].item()
             for anchors_per_feature_map in anchors_over_all_feature_maps:
                 boxlist = BoxList(
                     anchors_per_feature_map, (image_width, image_height), mode="xyxy"
                 )
                 self.add_visibility_to(boxlist)
                 anchors_in_image.append(boxlist)
+                print('width: %d, height: %d' % (image_width, image_height))
             anchors.append(anchors_in_image)
+        
         return anchors
 
 

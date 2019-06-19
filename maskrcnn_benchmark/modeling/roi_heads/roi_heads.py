@@ -52,6 +52,7 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             # this makes the API consistent during training and testing
             x, detections, loss_keypoint = self.keypoint(keypoint_features, detections, targets)
             losses.update(loss_keypoint)
+        
         return x, detections, losses
 
 
@@ -61,7 +62,6 @@ def build_roi_heads(cfg, in_channels):
     roi_heads = []
     if cfg.MODEL.RETINANET_ON:
         return []
-
     if not cfg.MODEL.RPN_ONLY:
         roi_heads.append(("box", build_roi_box_head(cfg, in_channels)))
     if cfg.MODEL.MASK_ON:

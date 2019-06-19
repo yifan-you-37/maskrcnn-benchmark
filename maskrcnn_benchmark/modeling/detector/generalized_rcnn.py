@@ -25,12 +25,15 @@ class GeneralizedRCNN(nn.Module):
 
     def __init__(self, cfg):
         super(GeneralizedRCNN, self).__init__()
-
+        self.onnx_wrapper = ONNXWrapper(cfg)
         self.backbone = build_backbone(cfg)
         self.rpn = build_rpn(cfg, self.backbone.out_channels)
         self.roi_heads = build_roi_heads(cfg, self.backbone.out_channels)
 
-    def forward(self, images, targets=None):
+        self.cfg = cfg
+        self.device = torch.device(cfg.MODEL.DEVICE)
+
+    def forward(self, images, image_sizes, targets=None):
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed
@@ -45,9 +48,35 @@ class GeneralizedRCNN(nn.Module):
         """
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
-        images = to_image_list(images)
-        features = self.backbone(images.tensors)
-        proposals, proposal_losses = self.rpn(images, features, targets)
+        # images = to_image_list(images)
+        images = to_image_list(images, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
+        images = images.to(self.device)
+
+        #convert image_sizes to 2d tensor
+        image_sizes = torch.IntTensor(image_sizes).to(self.device)
+
+        # print('backbone tensor input shape:', images.image_sizes)
+        input_names = ['input_image', 'input_image_size']
+        output_names = ['output']
+        dummy_input = (images.tensors, image_sizes)
+        # torch.onnx.export(self.onnx_wrapper, dummy_input, "rcnn.onnx", verbose=True, input_names=input_names, output_names=output_names)
+        return self.onnx_wrapper(images.tensors, image_sizes)
+        
+class ONNXWrapper(nn.Module):
+    def __init__(self, cfg):
+        super(ONNXWrapper, self).__init__()
+
+        self.backbone = build_backbone(cfg)
+        self.rpn = build_rpn(cfg, self.backbone.out_channels)
+        self.roi_heads = build_roi_heads(cfg, self.backbone.out_channels)
+
+    def forward(self, images, image_sizes, targets=None):
+        # features = self.backbone(images.tensors)
+        # proposals, proposal_losses = self.rpn(images, image_sizes, features, targets)
+        
+        features = self.backbone(images)
+        proposals, proposal_losses = self.rpn(images, image_sizes, features, targets)
+
         if self.roi_heads:
             x, result, detector_losses = self.roi_heads(features, proposals, targets)
         else:
@@ -55,11 +84,13 @@ class GeneralizedRCNN(nn.Module):
             x = features
             result = proposals
             detector_losses = {}
+        
+        # if self.training:
+        #     losses = {}
+        #     losses.update(detector_losses)
+        #     losses.update(proposal_losses)
+        #     return losses
 
-        if self.training:
-            losses = {}
-            losses.update(detector_losses)
-            losses.update(proposal_losses)
-            return losses
-
+        # result = [tmp.bbox for tmp in result]
+        print('done')
         return result

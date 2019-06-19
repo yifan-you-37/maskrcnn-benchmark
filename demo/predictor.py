@@ -230,11 +230,19 @@ class COCODemo(object):
         image = self.transforms(original_image)
         # convert to an ImageList, padded so that it is divisible by
         # cfg.DATALOADER.SIZE_DIVISIBILITY
-        image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        image_list = image_list.to(self.device)
+
+        image_width = image.shape[-1]
+        image_height = image.shape[-2]
+        print(image_width, image_height)
+
+        # image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
+        # image_list = image_list.to(self.device)
+        # print(len(image_list.tensors))
+        # print(image_list.image_sizes)
+
         # compute predictions
         with torch.no_grad():
-            predictions = self.model(image_list)
+            predictions = self.model(image, [[image_width, image_height],])
         predictions = [o.to(self.cpu_device) for o in predictions]
 
         # always single image is passed at a time
